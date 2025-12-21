@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Pacman 3D</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background: #222; }
+        
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+        }
+
+        /* EKRAN BONUSOWY (YOUTUBE) */
+        #bonus-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none; /* Domyślnie ukryty */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        
+        #bonus-text {
+            font-size: 5rem; color: #ff00ff; font-weight: bold;
+            margin-bottom: 20px; text-shadow: 0 0 20px #fff;
+            animation: pulse 1s infinite alternate;
+        }
+        
+        #yt-player-container {
+            width: 80%; height: 70%;
+            border: 5px solid #ff00ff;
+            box-shadow: 0 0 30px #ff00ff;
+        }
+
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+        /* MENU I HUD */
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; pointer-events: auto;
+            color: white; z-index: 10;
+        }
+
+        h1 { font-size: 4rem; color: #ffcc00; margin-bottom: 20px; text-shadow: 2px 2px #000; }
+        .btn {
+            padding: 15px 30px; font-size: 1.5rem; margin: 10px; cursor: pointer;
+            border: none; border-radius: 10px; background: #444; color: white; transition: 0.3s;
+        }
+        .btn:hover { background: #ffcc00; color: #000; transform: scale(1.1); }
+
+        #hud { padding: 20px; color: white; font-size: 1.5rem; display: flex; justify-content: space-between; text-shadow: 1px 1px 2px black; }
+        .hud-item span { font-weight: bold; color: #ffcc00; }
+        
+        #message-area {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 3rem; color: #fff; text-shadow: 0 0 10px red; opacity: 0; transition: opacity 0.5s;
+        }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    
+    <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div id="hud" style="display: none;">
+            <div class="hud-item">Poziom: <span id="level-disp">1</span></div>
+            <div class="hud-item">Szukaj: <span id="target-disp" style="color: #0f0; font-size: 2rem;">1</span></div>
+            <div class="hud-item">Życia: <span id="lives-disp">❤❤❤❤❤</span></div>
+        </div>
+        <div id="message-area">BŁĄD</div>
+    </div>
+
+    <div id="bonus-layer">
+        <div id="bonus-text">SUPER BONUS!!!</div>
+        <div id="yt-player-container">
+            <div id="player"></div>
+        </div>
+        <p style="color: white; font-size: 1.2rem; margin-top: 10px;">Nagroda trwa 60 sekund...</p>
+    </div>
+
+    <div id="overlay">
+        <h1>MATH PACMAN</h1>
+        <p>Wybierz język / Choose language:</p>
+        <div>
+            <button class="btn" onclick="startGame('pl')">🇵🇱 Polski</button>
+            <button class="btn" onclick="startGame('en')">🇺🇸 English</button>
+            <button class="btn" onclick="startGame('de')">🇩🇪 Deutsch</button>
+            <button class="btn" onclick="startGame('fr')">🇫🇷 Français</button>
+        </div>
+    </div>
+
+    <script type="module" src="./game.js"></script>
+    <script>
+        window.startGame = (lang) => {
+            window.dispatchEvent(new CustomEvent('init-game', { detail: { lang } }));
+        };
+    </script>
+</body>
+</html>
