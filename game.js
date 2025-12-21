@@ -6,7 +6,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 // ⚙️ GŁÓWNA KONFIGURACJA
 // ==========================================================================
 
-const ENABLE_BONUSES = true;
+const ENABLE_BONUSES = false;
 const BONUS_TIME_SECONDS = 6;
 
 // ==========================================================================
@@ -41,7 +41,7 @@ const LEVEL_CONFIG = [
 ];
 
 const SCENE_SIZE = 18;
-const PACMAN_SPEED = 0.15;
+const PACMAN_SPEED = 0.05;
 const SAFE_SPAWN_DISTANCE = 5.0;
 const MIN_NUMBER_SPACING = 2.5;
 

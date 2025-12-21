@@ -1,7 +1,3 @@
-Here is the complete **README.md** documentation in English.
-
----
-
 # ᗧ • • • MATH-PAC
 
 **MATH-PAC** is a 3D browser-based educational game designed to help children master numbers and counting in multiple languages. The player controls a 3D character (Pacman style), eating numbers in the correct sequence to progress.
