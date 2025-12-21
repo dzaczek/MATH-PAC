@@ -3,18 +3,17 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 // ==========================================================================
-// 📺 KONFIGURACJA FILMÓW (ID filmu z YouTube)
+// ⚙️ GŁÓWNA KONFIGURACJA
 // ==========================================================================
-const BONUS_PLAYLIST = [
-    "wzb0uolNv5c", // Bonus po Level 1 (Krecik?)
-    "wzb0uolNv5c", // Bonus po Level 2 (Tutaj możesz wkleić inne ID, np. Peppa)
-    "wzb0uolNv5c", // Bonus po Level 3
-    // Jeśli zabraknie linków, lista będzie lecieć od początku
-];
+const ENABLE_BONUSES = true;
 
-// ==========================================================================
-// ⚙️ KONFIGURACJA POZIOMÓW
-// ==========================================================================
+const BONUS_PLAYLISTS = {
+    'pl': ["wzb0uolNv5c", "Oq69T6tT79c", "wzb0uolNv5c"],
+    'en': ["_WnwvI8EKDw", "7D4K9oi7oBM", "_WnwvI8EKDw"],
+    'de': ["J3i56A55aC4", "J3i56A55aC4", "J3i56A55aC4"],
+    'fr': ["d8x2aQJgXb4", "d8x2aQJgXb4", "d8x2aQJgXb4"]
+};
+
 const LEVEL_CONFIG = [
     { mode: 'range', min: 1, max: 5 },
     { mode: 'range', min: 6, max: 9 },
@@ -30,7 +29,7 @@ const SAFE_SPAWN_DISTANCE = 5.0;
 const MIN_NUMBER_SPACING = 2.5;
 
 // ==========================================================================
-// 🎮 SILNIK GRY
+// 🎮 ZMIENNE GLOBALNE
 // ==========================================================================
 
 let scene, camera, renderer, font;
@@ -38,12 +37,13 @@ let pacman;
 const numbersOnBoard = [];
 const keys = { w: false, a: false, s: false, d: false };
 
-// Obiekt gracza YouTube (globalny, żeby API go widziało)
+// ZMIENNE YOUTUBE
 let ytPlayer = null;
+let isPlayerReady = false;
 
 const gameState = {
     active: false,
-    bonusActive: false, // Czy trwa przerwa filmowa
+    bonusActive: false,
     levelIndex: 0,
     objectives: [],
     currentObjIndex: 0,
@@ -54,22 +54,49 @@ const gameState = {
 
 const getCurrentTarget = () => gameState.objectives[gameState.currentObjIndex];
 
-// --- INICJALIZACJA YOUTUBE (Wywoływana automatycznie przez API) ---
-window.onYouTubeIframeAPIReady = function() {
-    ytPlayer = new YT.Player('player', {
-        height: '100%',
-        width: '100%',
-        videoId: '', // Na razie pusty
-        playerVars: {
-            'autoplay': 1,
-            'controls': 0, // Ukryj paski kontrolne
-            'rel': 0       // Nie pokazuj polecanych na koniec
-        }
-    });
-};
+// ==========================================================================
+// 🛠️ INICJALIZACJA YOUTUBE (Metoda Wstrzykiwania)
+// ==========================================================================
 
-// --- INICJALIZACJA SCENY ---
+function loadYouTubeAPI() {
+    // 1. Definiujemy funkcję callback ZANIM załadujemy skrypt
+    window.onYouTubeIframeAPIReady = function() {
+        console.log("✅ YouTube API załadowane. Tworzę odtwarzacz...");
+        ytPlayer = new YT.Player('player', {
+            height: '100%',
+            width: '100%',
+            videoId: 'wzb0uolNv5c', // Placeholder na start
+            playerVars: {
+                'autoplay': 0,
+                'controls': 0,
+                'rel': 0,
+                'origin': window.location.origin
+            },
+            events: {
+                'onReady': () => {
+                    console.log("✅ Odtwarzacz YouTube gotowy do akcji!");
+                    isPlayerReady = true;
+                },
+                'onError': (e) => { console.error("❌ Błąd playera:", e); }
+            }
+        });
+    };
+
+    // 2. Wstrzykujemy skrypt YouTube do HTML
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+}
+
+
+// ==========================================================================
+// 🎮 INICJALIZACJA GRY (THREE.JS)
+// ==========================================================================
 function init() {
+    // Najpierw ładujemy YouTube
+    loadYouTubeAPI();
+
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x202025);
 
@@ -106,7 +133,7 @@ function init() {
     });
 
     window.addEventListener('keydown', (e) => {
-        if(gameState.bonusActive) return; // Blokada sterowania podczas filmu
+        if(gameState.bonusActive) return;
         handleInput(e.code, true);
         if (e.code === 'KeyH') {
             gameState.hintsEnabled = !gameState.hintsEnabled;
@@ -203,7 +230,6 @@ class Pacman {
         if (this.velocity.x !== 0 || this.velocity.z !== 0) {
             const angle = Math.atan2(this.velocity.x, this.velocity.z);
             this.body.rotation.y = angle;
-
             this.mouthTimer += 0.25;
             const openAmount = (Math.sin(this.mouthTimer) + 1) * 0.3;
             this.topJaw.rotation.x = -openAmount;
@@ -276,42 +302,34 @@ class NumberObj {
 
 window.addEventListener('init-game', (e) => {
     if(!font) return;
-
     gameState.lang = e.detail.lang;
     gameState.lives = 5;
     gameState.levelIndex = 0;
     gameState.active = true;
     gameState.hintsEnabled = true;
-
     document.getElementById('overlay').style.display = 'none';
     document.getElementById('hud').style.display = 'flex';
     updateHud();
-
     if (!pacman) pacman = new Pacman();
     else {
         pacman.pivot.position.set(0, pacman.radius + 0.2, 0);
         pacman.pivot.rotation.set(0,0,0);
     }
-
     startLevel(0);
     animate();
 });
 
 function startLevel(idx) {
     gameState.levelIndex = idx;
-
     if (idx >= LEVEL_CONFIG.length) {
         alert("FINITO! KONIEC!");
         location.reload();
         return;
     }
-
     numbersOnBoard.forEach(n => scene.remove(n.mesh));
     numbersOnBoard.length = 0;
-
     const config = LEVEL_CONFIG[idx];
     gameState.objectives = [];
-
     if (config.mode === 'range') {
         for (let i = config.min; i <= config.max; i++) {
             gameState.objectives.push(i);
@@ -319,13 +337,11 @@ function startLevel(idx) {
     } else if (config.mode === 'list') {
         gameState.objectives = [...config.numbers];
     }
-
     gameState.currentObjIndex = 0;
     gameState.objectives.forEach(val => {
         const num = new NumberObj(val);
         numbersOnBoard.push(num);
     });
-
     highlightTarget();
     updateHud();
 }
@@ -342,11 +358,9 @@ function highlightTarget() {
 
 function checkCollisions() {
     if (!gameState.active || gameState.bonusActive) return;
-
     for (let i = 0; i < numbersOnBoard.length; i++) {
         const numObj = numbersOnBoard[i];
         const dist = pacman.pivot.position.distanceTo(numObj.mesh.position);
-
         if (dist < 1.2) {
             handleCollision(numObj, i);
             break;
@@ -354,7 +368,6 @@ function checkCollisions() {
     }
 }
 
-// --- OBSŁUGA UKOŃCZENIA POZIOMU (Z BONUSEM) ---
 function handleCollision(numObj, index) {
     const targetVal = getCurrentTarget();
 
@@ -365,8 +378,15 @@ function handleCollision(numObj, index) {
         gameState.currentObjIndex++;
 
         if (gameState.currentObjIndex >= gameState.objectives.length) {
-            // KONIEC POZIOMU - START BONUSU
-            triggerBonus();
+
+            // BONUS TRIGGER
+            if (ENABLE_BONUSES) {
+                triggerBonus();
+            } else {
+                showFeedback("POZIOM UKOŃCZONY!", "#0f0");
+                setTimeout(() => startLevel(gameState.levelIndex + 1), 2000);
+            }
+
         } else {
             highlightTarget();
         }
@@ -375,76 +395,80 @@ function handleCollision(numObj, index) {
         playSound('wrong');
         gameState.lives--;
         numObj.respawn();
-
         let errorMsg = "ERROR";
-        // Obsługa 4 języków
         const isSmall = numObj.value < 10;
-
         if (gameState.lang === 'pl') errorMsg = isSmall ? "ZŁA CYFRA!" : "ZŁA LICZBA!";
         else if (gameState.lang === 'en') errorMsg = "WRONG NUMBER!";
         else if (gameState.lang === 'de') errorMsg = "FALSCHE ZAHL!";
-        else if (gameState.lang === 'fr') errorMsg = isSmall ? "MAUVAIS CHIFFRE!" : "MAUVAIS NUMÉRO!"; // FR
-
+        else if (gameState.lang === 'fr') errorMsg = isSmall ? "MAUVAIS CHIFFRE!" : "MAUVAIS NUMÉRO!";
         showFeedback(errorMsg, "#f00");
         if (gameState.lives <= 0) gameOver();
     }
     updateHud();
 }
 
-// --- FUNKCJE BONUSOWE (YOUTUBE) ---
-
+// --- FUNKCJA WYZWALAJĄCA BONUS ---
 function triggerBonus() {
     gameState.bonusActive = true;
-    gameState.active = false; // Zatrzymaj ruch Pacmana
+    gameState.active = false;
 
-    // Wybierz wideo z listy (pętla modulo)
-    const videoId = BONUS_PLAYLIST[gameState.levelIndex % BONUS_PLAYLIST.length];
+    // 1. MECHANIZM RETRY - Czekaj jeśli player nie jest gotowy
+    if (!ytPlayer || !isPlayerReady || typeof ytPlayer.loadVideoById !== 'function') {
+        console.warn("YouTube Player jeszcze nie gotowy... próbuję ponownie za 0.5s");
 
-    // Pokaż overlay
-    document.getElementById('bonus-layer').style.display = 'flex';
+        // Pokaż komunikat o ładowaniu
+        document.getElementById('bonus-layer').style.display = 'flex';
+        document.getElementById('bonus-text').innerText = "ŁADOWANIE...";
 
-    // Uruchom wideo
-    if(ytPlayer) {
-        ytPlayer.loadVideoById(videoId);
-        // Opcjonalnie: ytPlayer.playVideo(); (choć loadVideoById zwykle autostartuje)
+        setTimeout(triggerBonus, 500); // REKURENCJA (Spróbuj znowu)
+        return;
     }
 
-    // Ustaw timer na 60 sekund (60000 ms)
+    // 2. Wybór filmu
+    const langPlaylist = BONUS_PLAYLISTS[gameState.lang] || BONUS_PLAYLISTS['en'];
+    const videoId = langPlaylist[gameState.levelIndex % langPlaylist.length];
+
+    if (!videoId) {
+        endBonus();
+        return;
+    }
+
+    // 3. Start
+    document.getElementById('bonus-layer').style.display = 'flex';
+    ytPlayer.loadVideoById(videoId);
+
+    // 4. Timer
     let timeLeft = 60;
     const bonusText = document.getElementById('bonus-text');
     bonusText.innerText = "BONUS! (60s)";
 
-    // Odliczanie (opcjonalne, dla efektu)
-    const interval = setInterval(() => {
+    // Czyścimy stare interwały
+    if (window.bonusInterval) clearInterval(window.bonusInterval);
+    if (window.bonusTimeout) clearTimeout(window.bonusTimeout);
+
+    window.bonusInterval = setInterval(() => {
         timeLeft--;
         bonusText.innerText = `BONUS! (${timeLeft}s)`;
-        if(timeLeft <= 0) clearInterval(interval);
+        if(timeLeft <= 0) clearInterval(window.bonusInterval);
     }, 1000);
 
-    // Koniec bonusu po 60s
-    setTimeout(() => {
-        clearInterval(interval);
+    window.bonusTimeout = setTimeout(() => {
+        clearInterval(window.bonusInterval);
         endBonus();
-    }, 60000); // <-- TUTAJ ZMIENIASZ CZAS TRWANIA FILMU (w ms)
+    }, 60000);
 }
 
 function endBonus() {
-    // Zatrzymaj film
-    if(ytPlayer) {
-        ytPlayer.stopVideo();
+    if(ytPlayer && typeof ytPlayer.stopVideo === 'function') {
+        try { ytPlayer.stopVideo(); } catch(e) { console.error(e); }
     }
-
-    // Ukryj overlay
     document.getElementById('bonus-layer').style.display = 'none';
-
-    // Wznów grę na nowym poziomie
     gameState.bonusActive = false;
     gameState.active = true;
     startLevel(gameState.levelIndex + 1);
 }
 
 // --- UTILITIES ---
-
 function playSound(name) {
     const audio = new Audio(`assets/sounds/${gameState.lang}/${name}.mp3`);
     audio.volume = 0.8;
@@ -479,19 +503,15 @@ function gameOver() {
 }
 
 function animate() {
-    // Animujemy nawet jak nieaktywna, żeby renderował się statyczny obraz w tle
     requestAnimationFrame(animate);
-
     if(gameState.active && !gameState.bonusActive) {
         pacman.update();
     }
-
     const time = Date.now() * 0.002;
     numbersOnBoard.forEach(n => {
         n.mesh.position.y = 0.8 + Math.sin(time + n.value) * 0.15;
         n.mesh.rotation.y = Math.sin(time * 0.5 + n.value) * 0.2;
     });
-
     checkCollisions();
     renderer.render(scene, camera);
 }
