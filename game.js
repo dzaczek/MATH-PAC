@@ -7,58 +7,46 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 // ==========================================================================
 
 const ENABLE_BONUSES = true;
-const BONUS_TIME_SECONDS = 6; // Czas trwania jednego fragmentu
+const BONUS_TIME_SECONDS = 6;
 
 // ==========================================================================
-// 📺 KONFIGURACJA FILMÓW (LISTY)
+// 📺 KONFIGURACJA FILMÓW
 // ==========================================================================
-// Filmy będą odtwarzane po kolei.
-// Dopiero jak skończy się pierwszy (w kawałkach po 60s), włączy się drugi.
-
 const BONUS_PLAYLISTS = {
-
     'pl': [
-        "wzb0uolNv5c", // Film 1 (np. Krecik)
-        "Oq69T6tT79c", // Film 2 (np. Reksio)
-        "J3i56A55aC4", // Film 3
+        "wzb0uolNv5c", // Film 1
+        "wzb0uolNv5c", // Film 2
+        "wzb0uolNv5c", // Film 3
     ],
-    'en': [
-        "_WnwvI8EKDw",
-        "7D4K9oi7oBM",
-    ],
-    'de': [
-        "J3i56A55aC4",
-        "J3i56A55aC4",
-    ],
-    'fr': [
-        "d8x2aQJgXb4",
-        "d8x2aQJgXb4",
-    ]
+    'en': ["_WnwvI8EKDw", "7D4K9oi7oBM", "_WnwvI8EKDw"],
+    'de': ["J3i56A55aC4", "J3i56A55aC4", "J3i56A55aC4"],
+    'fr': ["d8x2aQJgXb4", "d8x2aQJgXb4", "d8x2aQJgXb4"]
 };
 
 // ==========================================================================
-// 🧩 KONFIGURACJA POZIOMÓW
+// 🧩 KONFIGURACJA POZIOMÓW (TWOJA NOWA LISTA)
 // ==========================================================================
-
-
 const LEVEL_CONFIG = [
     { mode: 'range', min: 1, max: 6 },
-   { mode: 'range', min: 6, max: 9 },
-     { mode: 'range', min: 9, max: 10 },
+    { mode: 'range', min: 6, max: 9 },
+    { mode: 'range', min: 9, max: 10 },
     { mode: 'range', min: 9, max: 11 },
-     { mode: 'range', min: 10, max: 12 },
-     { mode: 'range', min: 10, max: 13 },
-     { mode: 'range', min: 10, max: 14 },
-     { mode: 'range', min: 10, max: 19 },
-     { mode: 'list', numbers: [1, 2, 3, 4] },
+    { mode: 'range', min: 10, max: 12 },
+    { mode: 'range', min: 10, max: 13 },
+    { mode: 'range', min: 10, max: 14 },
+    { mode: 'range', min: 10, max: 19 },
+    { mode: 'list', numbers: [1, 2, 3, 4] },
     { mode: 'list', numbers: [10, 11, 12, 13, 14, 15] },
     { mode: 'range', min: 1, max: 20 }
- ];
+];
 
 const SCENE_SIZE = 18;
 const PACMAN_SPEED = 0.15;
 const SAFE_SPAWN_DISTANCE = 5.0;
 const MIN_NUMBER_SPACING = 2.5;
+
+// Ustawienia Kamery
+const BASE_CAMERA_POS = { x: 0, y: 14, z: 14 }; // Pozycja wyjściowa
 
 // ==========================================================================
 // 🎮 ZMIENNE GLOBALNE
@@ -86,10 +74,8 @@ const gameState = {
     lives: 5,
     lang: 'pl',
     hintsEnabled: true,
-
-    // --- NOWA LOGIKA ODTWARZANIA ---
-    currentVideoIndex: 0,   // Który film z listy oglądamy
-    currentVideoTime: 0     // W której sekundzie filmu jesteśmy (np. 0, 60, 120...)
+    currentVideoIndex: 0,
+    currentVideoTime: 0
 };
 
 const getCurrentTarget = () => gameState.objectives[gameState.currentObjIndex];
@@ -104,24 +90,15 @@ function loadYouTubeAPI() {
         ytPlayer = new YT.Player('player', {
             height: '100%',
             width: '100%',
-            videoId: 'wzb0uolNv5c', // Placeholder
+            videoId: 'wzb0uolNv5c',
             playerVars: {
-                'autoplay': 0,
-                'controls': 0,
-                'rel': 0,
-                'origin': window.location.origin,
-                'start': 0 // Ważne: start od 0
+                'autoplay': 0, 'controls': 0, 'rel': 0, 'origin': window.location.origin, 'start': 0
             },
             events: {
-                'onReady': () => {
-                    console.log("✅ Player Ready.");
-                    isPlayerReady = true;
-                },
+                'onReady': () => { isPlayerReady = true; },
                 'onError': (e) => {
                     console.error("❌ Błąd playera YouTube: " + e.data);
-                    if (gameState.bonusActive) {
-                        endBonus(true); // Wymuś koniec w razie błędu
-                    }
+                    if (gameState.bonusActive) endBonus(true);
                 }
             }
         });
@@ -143,7 +120,8 @@ function init() {
     scene.background = new THREE.Color(0x202025);
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 14, 14);
+    // Ustawiamy pozycję startową
+    camera.position.set(BASE_CAMERA_POS.x, BASE_CAMERA_POS.y, BASE_CAMERA_POS.z);
     camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -345,11 +323,8 @@ window.addEventListener('init-game', (e) => {
     gameState.lang = e.detail.lang;
     gameState.lives = 5;
     gameState.levelIndex = 0;
-
-    // Reset stanu wideo przy starcie nowej gry
     gameState.currentVideoIndex = 0;
     gameState.currentVideoTime = 0;
-
     gameState.active = true;
     gameState.hintsEnabled = true;
     document.getElementById('overlay').style.display = 'none';
@@ -416,9 +391,7 @@ function checkCollisions() {
 
 function handleCollision(numObj, index) {
     if (gameState.bonusActive) return;
-
     const targetVal = getCurrentTarget();
-
     if (numObj.value === targetVal) {
         playSound(numObj.value);
         scene.remove(numObj.mesh);
@@ -426,19 +399,16 @@ function handleCollision(numObj, index) {
         gameState.currentObjIndex++;
 
         if (gameState.currentObjIndex >= gameState.objectives.length) {
-
             if (ENABLE_BONUSES) {
                 triggerBonus();
             } else {
                 showFeedback("POZIOM UKOŃCZONY!", "#0f0");
                 setTimeout(() => startLevel(gameState.levelIndex + 1), 2000);
             }
-
         } else {
             highlightTarget();
         }
-    }
-    else {
+    } else {
         playSound('wrong');
         gameState.lives--;
         numObj.respawn();
@@ -455,14 +425,37 @@ function handleCollision(numObj, index) {
 }
 
 // ==========================================================================
-// 📺 LOGIKA BONUSU (ODTWARZANIE FRAGMENTAMI)
+// 🎥 DYNAMICZNA KAMERA
+// ==========================================================================
+function updateCamera() {
+    if (!pacman || !camera) return;
+
+    // Pobieramy pozycję Z Pacmana (głębokość)
+    const pacZ = pacman.pivot.position.z;
+
+    // Obliczamy cel dla kamery
+    // Jeśli Pacman idzie w stronę kamery (Z > 0), kamera odjeżdża
+    // Używamy Math.max(0, ...), żeby kamera nie przybliżała się za bardzo, gdy Pacman jest głęboko w planszy (Z < 0)
+
+    // Czułość (0.8 oznacza, że na każdy 1m ruchu Pacmana, kamera cofa się o 0.8m)
+    const zoomOffset = Math.max(0, pacZ * 0.8);
+
+    const targetZ = BASE_CAMERA_POS.z + zoomOffset;
+    const targetY = BASE_CAMERA_POS.y + (zoomOffset * 0.3); // Lekko w górę też
+
+    // Płynna interpolacja (Lerp) - 0.1 to prędkość wygładzania
+    camera.position.z += (targetZ - camera.position.z) * 0.1;
+    camera.position.y += (targetY - camera.position.y) * 0.1;
+}
+
+// ==========================================================================
+// 📺 LOGIKA BONUSU
 // ==========================================================================
 
 function clearBonusTimers() {
     if (timerRetry) clearTimeout(timerRetry);
     if (timerCountdown) clearInterval(timerCountdown);
     if (timerEnd) clearTimeout(timerEnd);
-
     timerRetry = null;
     timerCountdown = null;
     timerEnd = null;
@@ -472,11 +465,9 @@ function triggerBonus() {
     if (gameState.bonusActive) {
         if(timerRetry) clearTimeout(timerRetry);
     }
-
     gameState.bonusActive = true;
     gameState.active = false;
 
-    // RETRY
     if (!ytPlayer || !isPlayerReady || typeof ytPlayer.loadVideoById !== 'function') {
         console.warn("⏳ Czekam na YouTube...");
         document.getElementById('bonus-layer').style.display = 'flex';
@@ -485,11 +476,7 @@ function triggerBonus() {
         return;
     }
 
-    // 1. Wybierz listę dla języka
     const langPlaylist = BONUS_PLAYLISTS[gameState.lang] || BONUS_PLAYLISTS['en'];
-
-    // 2. Wybierz aktualny film na podstawie indeksu
-    // Używamy modulo, żeby po skończeniu wszystkich filmów zacząć od początku listy
     const safeVideoIndex = gameState.currentVideoIndex % langPlaylist.length;
     const videoId = langPlaylist[safeVideoIndex];
 
@@ -499,16 +486,13 @@ function triggerBonus() {
     }
 
     document.getElementById('bonus-layer').style.display = 'flex';
-
-    // 3. Załaduj wideo OD KONKRETNEJ SEKUNDY
-    console.log(`🎬 Odtwarzanie filmu ${videoId} od sekundy: ${gameState.currentVideoTime}`);
+    console.log(`🎬 Film: ${videoId}, Start: ${gameState.currentVideoTime}s`);
 
     ytPlayer.loadVideoById({
         'videoId': videoId,
         'startSeconds': gameState.currentVideoTime
     });
 
-    // LICZNIK CZASU
     let timeLeft = BONUS_TIME_SECONDS;
     const bonusText = document.getElementById('bonus-text');
     bonusText.innerText = `BONUS! (${timeLeft}s)`;
@@ -529,28 +513,20 @@ function triggerBonus() {
 
 function endBonus(forceNext = false) {
     clearBonusTimers();
-
-    // 1. Zatrzymaj wideo i pobierz długość
     let duration = 0;
     if(ytPlayer && typeof ytPlayer.stopVideo === 'function') {
         try {
-            duration = ytPlayer.getDuration(); // Pobierz długość filmu w sekundach
+            duration = ytPlayer.getDuration();
             ytPlayer.stopVideo();
         } catch(e) { console.error(e); }
     }
 
-    // 2. Aktualizuj czas oglądania (dodaj 60s)
     gameState.currentVideoTime += BONUS_TIME_SECONDS;
 
-    console.log(`⏱️ Czas po obejrzeniu: ${gameState.currentVideoTime}s (Długość filmu: ${duration}s)`);
-
-    // 3. Sprawdź czy film się skończył (lub czy był błąd)
-    // Jeśli aktualny czas jest większy niż długość filmu (z małym marginesem błędu)
-    // Lub jeśli duration == 0 (błąd ładowania)
     if (forceNext || (duration > 0 && gameState.currentVideoTime >= duration)) {
-        console.log("🎉 Film zakończony! Przełączam na następny przy kolejnym bonusie.");
-        gameState.currentVideoIndex++; // Następny film
-        gameState.currentVideoTime = 0; // Reset czasu do 0
+        console.log("🎉 Film zakończony!");
+        gameState.currentVideoIndex++;
+        gameState.currentVideoTime = 0;
     }
 
     document.getElementById('bonus-layer').style.display = 'none';
@@ -596,14 +572,19 @@ function gameOver() {
 
 function animate() {
     requestAnimationFrame(animate);
+
     if(gameState.active && !gameState.bonusActive) {
         pacman.update();
+        // --- AKTUALIZACJA KAMERY ---
+        updateCamera();
     }
+
     const time = Date.now() * 0.002;
     numbersOnBoard.forEach(n => {
         n.mesh.position.y = 0.8 + Math.sin(time + n.value) * 0.15;
         n.mesh.rotation.y = Math.sin(time * 0.5 + n.value) * 0.2;
     });
+
     checkCollisions();
     renderer.render(scene, camera);
 }
