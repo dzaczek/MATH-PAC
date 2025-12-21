@@ -5,15 +5,39 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 // ==========================================================================
 // ⚙️ GŁÓWNA KONFIGURACJA
 // ==========================================================================
+
 const ENABLE_BONUSES = true;
+const BONUS_TIME_SECONDS = 60; // Czas trwania jednego fragmentu
+
+// ==========================================================================
+// 📺 KONFIGURACJA FILMÓW (LISTY)
+// ==========================================================================
+// Filmy będą odtwarzane po kolei.
+// Dopiero jak skończy się pierwszy (w kawałkach po 60s), włączy się drugi.
 
 const BONUS_PLAYLISTS = {
-    'pl': ["wzb0uolNv5c", "Oq69T6tT79c", "wzb0uolNv5c"],
-    'en': ["_WnwvI8EKDw", "7D4K9oi7oBM", "_WnwvI8EKDw"],
-    'de': ["J3i56A55aC4", "J3i56A55aC4", "J3i56A55aC4"],
-    'fr': ["d8x2aQJgXb4", "d8x2aQJgXb4", "d8x2aQJgXb4"]
+    'pl': [
+        "wzb0uolNv5c", // Film 1 (np. Krecik)
+        "Oq69T6tT79c", // Film 2 (np. Reksio)
+        "J3i56A55aC4", // Film 3
+    ],
+    'en': [
+        "_WnwvI8EKDw",
+        "7D4K9oi7oBM",
+    ],
+    'de': [
+        "J3i56A55aC4",
+        "J3i56A55aC4",
+    ],
+    'fr': [
+        "d8x2aQJgXb4",
+        "d8x2aQJgXb4",
+    ]
 };
 
+// ==========================================================================
+// 🧩 KONFIGURACJA POZIOMÓW
+// ==========================================================================
 const LEVEL_CONFIG = [
     { mode: 'range', min: 1, max: 5 },
     { mode: 'range', min: 6, max: 9 },
@@ -37,9 +61,13 @@ let pacman;
 const numbersOnBoard = [];
 const keys = { w: false, a: false, s: false, d: false };
 
-// ZMIENNE YOUTUBE
+// YOUTUBE & TIMERY
 let ytPlayer = null;
 let isPlayerReady = false;
+
+let timerRetry = null;
+let timerCountdown = null;
+let timerEnd = null;
 
 const gameState = {
     active: false,
@@ -49,52 +77,58 @@ const gameState = {
     currentObjIndex: 0,
     lives: 5,
     lang: 'pl',
-    hintsEnabled: true
+    hintsEnabled: true,
+
+    // --- NOWA LOGIKA ODTWARZANIA ---
+    currentVideoIndex: 0,   // Który film z listy oglądamy
+    currentVideoTime: 0     // W której sekundzie filmu jesteśmy (np. 0, 60, 120...)
 };
 
 const getCurrentTarget = () => gameState.objectives[gameState.currentObjIndex];
 
 // ==========================================================================
-// 🛠️ INICJALIZACJA YOUTUBE (Metoda Wstrzykiwania)
+// 🛠️ INICJALIZACJA YOUTUBE
 // ==========================================================================
 
 function loadYouTubeAPI() {
-    // 1. Definiujemy funkcję callback ZANIM załadujemy skrypt
     window.onYouTubeIframeAPIReady = function() {
-        console.log("✅ YouTube API załadowane. Tworzę odtwarzacz...");
+        console.log("✅ YouTube API loaded.");
         ytPlayer = new YT.Player('player', {
             height: '100%',
             width: '100%',
-            videoId: 'wzb0uolNv5c', // Placeholder na start
+            videoId: 'wzb0uolNv5c', // Placeholder
             playerVars: {
                 'autoplay': 0,
                 'controls': 0,
                 'rel': 0,
-                'origin': window.location.origin
+                'origin': window.location.origin,
+                'start': 0 // Ważne: start od 0
             },
             events: {
                 'onReady': () => {
-                    console.log("✅ Odtwarzacz YouTube gotowy do akcji!");
+                    console.log("✅ Player Ready.");
                     isPlayerReady = true;
                 },
-                'onError': (e) => { console.error("❌ Błąd playera:", e); }
+                'onError': (e) => {
+                    console.error("❌ Błąd playera YouTube: " + e.data);
+                    if (gameState.bonusActive) {
+                        endBonus(true); // Wymuś koniec w razie błędu
+                    }
+                }
             }
         });
     };
 
-    // 2. Wstrzykujemy skrypt YouTube do HTML
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
     const firstScriptTag = document.getElementsByTagName('script')[0];
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 }
 
-
 // ==========================================================================
-// 🎮 INICJALIZACJA GRY (THREE.JS)
+// 🎮 INICJALIZACJA GRY
 // ==========================================================================
 function init() {
-    // Najpierw ładujemy YouTube
     loadYouTubeAPI();
 
     scene = new THREE.Scene();
@@ -154,7 +188,7 @@ function handleInput(code, isPressed) {
     if (code === 'KeyD' || code === 'ArrowRight') keys.d = isPressed;
 }
 
-// --- KLASA PACMANA ---
+// --- PACMAN ---
 class Pacman {
     constructor() {
         this.radius = 0.6;
@@ -202,7 +236,6 @@ class Pacman {
         this.leftEye = createEye(0.25, 0.35, 0.35);
         this.leftEye.lookAt(0, 0.35, 2);
         this.topJaw.add(this.leftEye);
-
         this.rightEye = createEye(-0.25, 0.35, 0.35);
         this.rightEye.lookAt(0, 0.35, 2);
         this.topJaw.add(this.rightEye);
@@ -214,7 +247,6 @@ class Pacman {
     update() {
         this.velocity.x = 0;
         this.velocity.z = 0;
-
         if (keys.w) this.velocity.z = -PACMAN_SPEED;
         if (keys.s) this.velocity.z = PACMAN_SPEED;
         if (keys.a) this.velocity.x = -PACMAN_SPEED;
@@ -241,7 +273,7 @@ class Pacman {
     }
 }
 
-// --- KLASA CYFERKI ---
+// --- CYFERKI ---
 class NumberObj {
     constructor(value) {
         this.value = value;
@@ -305,6 +337,11 @@ window.addEventListener('init-game', (e) => {
     gameState.lang = e.detail.lang;
     gameState.lives = 5;
     gameState.levelIndex = 0;
+
+    // Reset stanu wideo przy starcie nowej gry
+    gameState.currentVideoIndex = 0;
+    gameState.currentVideoTime = 0;
+
     gameState.active = true;
     gameState.hintsEnabled = true;
     document.getElementById('overlay').style.display = 'none';
@@ -320,9 +357,10 @@ window.addEventListener('init-game', (e) => {
 });
 
 function startLevel(idx) {
+    clearBonusTimers();
     gameState.levelIndex = idx;
     if (idx >= LEVEL_CONFIG.length) {
-        alert("FINITO! KONIEC!");
+        alert("GRATULACJE! KONIEC GRY!");
         location.reload();
         return;
     }
@@ -369,6 +407,8 @@ function checkCollisions() {
 }
 
 function handleCollision(numObj, index) {
+    if (gameState.bonusActive) return;
+
     const targetVal = getCurrentTarget();
 
     if (numObj.value === targetVal) {
@@ -379,7 +419,6 @@ function handleCollision(numObj, index) {
 
         if (gameState.currentObjIndex >= gameState.objectives.length) {
 
-            // BONUS TRIGGER
             if (ENABLE_BONUSES) {
                 triggerBonus();
             } else {
@@ -407,61 +446,105 @@ function handleCollision(numObj, index) {
     updateHud();
 }
 
-// --- FUNKCJA WYZWALAJĄCA BONUS ---
+// ==========================================================================
+// 📺 LOGIKA BONUSU (ODTWARZANIE FRAGMENTAMI)
+// ==========================================================================
+
+function clearBonusTimers() {
+    if (timerRetry) clearTimeout(timerRetry);
+    if (timerCountdown) clearInterval(timerCountdown);
+    if (timerEnd) clearTimeout(timerEnd);
+
+    timerRetry = null;
+    timerCountdown = null;
+    timerEnd = null;
+}
+
 function triggerBonus() {
+    if (gameState.bonusActive) {
+        if(timerRetry) clearTimeout(timerRetry);
+    }
+
     gameState.bonusActive = true;
     gameState.active = false;
 
-    // 1. MECHANIZM RETRY - Czekaj jeśli player nie jest gotowy
+    // RETRY
     if (!ytPlayer || !isPlayerReady || typeof ytPlayer.loadVideoById !== 'function') {
-        console.warn("YouTube Player jeszcze nie gotowy... próbuję ponownie za 0.5s");
-
-        // Pokaż komunikat o ładowaniu
+        console.warn("⏳ Czekam na YouTube...");
         document.getElementById('bonus-layer').style.display = 'flex';
-        document.getElementById('bonus-text').innerText = "ŁADOWANIE...";
-
-        setTimeout(triggerBonus, 500); // REKURENCJA (Spróbuj znowu)
+        document.getElementById('bonus-text').innerText = "ŁADOWANIE BAJKI...";
+        timerRetry = setTimeout(triggerBonus, 500);
         return;
     }
 
-    // 2. Wybór filmu
+    // 1. Wybierz listę dla języka
     const langPlaylist = BONUS_PLAYLISTS[gameState.lang] || BONUS_PLAYLISTS['en'];
-    const videoId = langPlaylist[gameState.levelIndex % langPlaylist.length];
+
+    // 2. Wybierz aktualny film na podstawie indeksu
+    // Używamy modulo, żeby po skończeniu wszystkich filmów zacząć od początku listy
+    const safeVideoIndex = gameState.currentVideoIndex % langPlaylist.length;
+    const videoId = langPlaylist[safeVideoIndex];
 
     if (!videoId) {
-        endBonus();
+        endBonus(true);
         return;
     }
 
-    // 3. Start
     document.getElementById('bonus-layer').style.display = 'flex';
-    ytPlayer.loadVideoById(videoId);
 
-    // 4. Timer
-    let timeLeft = 60;
+    // 3. Załaduj wideo OD KONKRETNEJ SEKUNDY
+    console.log(`🎬 Odtwarzanie filmu ${videoId} od sekundy: ${gameState.currentVideoTime}`);
+
+    ytPlayer.loadVideoById({
+        'videoId': videoId,
+        'startSeconds': gameState.currentVideoTime
+    });
+
+    // LICZNIK CZASU
+    let timeLeft = BONUS_TIME_SECONDS;
     const bonusText = document.getElementById('bonus-text');
-    bonusText.innerText = "BONUS! (60s)";
+    bonusText.innerText = `BONUS! (${timeLeft}s)`;
 
-    // Czyścimy stare interwały
-    if (window.bonusInterval) clearInterval(window.bonusInterval);
-    if (window.bonusTimeout) clearTimeout(window.bonusTimeout);
+    if (timerCountdown) clearInterval(timerCountdown);
+    if (timerEnd) clearTimeout(timerEnd);
 
-    window.bonusInterval = setInterval(() => {
+    timerCountdown = setInterval(() => {
         timeLeft--;
         bonusText.innerText = `BONUS! (${timeLeft}s)`;
-        if(timeLeft <= 0) clearInterval(window.bonusInterval);
+        if(timeLeft <= 0) clearInterval(timerCountdown);
     }, 1000);
 
-    window.bonusTimeout = setTimeout(() => {
-        clearInterval(window.bonusInterval);
+    timerEnd = setTimeout(() => {
         endBonus();
-    }, 60000);
+    }, BONUS_TIME_SECONDS * 1000);
 }
 
-function endBonus() {
+function endBonus(forceNext = false) {
+    clearBonusTimers();
+
+    // 1. Zatrzymaj wideo i pobierz długość
+    let duration = 0;
     if(ytPlayer && typeof ytPlayer.stopVideo === 'function') {
-        try { ytPlayer.stopVideo(); } catch(e) { console.error(e); }
+        try {
+            duration = ytPlayer.getDuration(); // Pobierz długość filmu w sekundach
+            ytPlayer.stopVideo();
+        } catch(e) { console.error(e); }
     }
+
+    // 2. Aktualizuj czas oglądania (dodaj 60s)
+    gameState.currentVideoTime += BONUS_TIME_SECONDS;
+
+    console.log(`⏱️ Czas po obejrzeniu: ${gameState.currentVideoTime}s (Długość filmu: ${duration}s)`);
+
+    // 3. Sprawdź czy film się skończył (lub czy był błąd)
+    // Jeśli aktualny czas jest większy niż długość filmu (z małym marginesem błędu)
+    // Lub jeśli duration == 0 (błąd ładowania)
+    if (forceNext || (duration > 0 && gameState.currentVideoTime >= duration)) {
+        console.log("🎉 Film zakończony! Przełączam na następny przy kolejnym bonusie.");
+        gameState.currentVideoIndex++; // Następny film
+        gameState.currentVideoTime = 0; // Reset czasu do 0
+    }
+
     document.getElementById('bonus-layer').style.display = 'none';
     gameState.bonusActive = false;
     gameState.active = true;
@@ -498,6 +581,7 @@ function updateHud() {
 
 function gameOver() {
     gameState.active = false;
+    clearBonusTimers();
     alert("KONIEC GRY!");
     location.reload();
 }
@@ -517,3 +601,5 @@ function animate() {
 }
 
 init();
+
+
