@@ -7,7 +7,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 // ==========================================================================
 
 const ENABLE_BONUSES = true;
-const BONUS_TIME_SECONDS = 60; // Czas trwania jednego fragmentu
+const BONUS_TIME_SECONDS = 6; // Czas trwania jednego fragmentu
 
 // ==========================================================================
 // 📺 KONFIGURACJA FILMÓW (LISTY)
@@ -16,6 +16,7 @@ const BONUS_TIME_SECONDS = 60; // Czas trwania jednego fragmentu
 // Dopiero jak skończy się pierwszy (w kawałkach po 60s), włączy się drugi.
 
 const BONUS_PLAYLISTS = {
+
     'pl': [
         "wzb0uolNv5c", // Film 1 (np. Krecik)
         "Oq69T6tT79c", // Film 2 (np. Reksio)
@@ -38,14 +39,21 @@ const BONUS_PLAYLISTS = {
 // ==========================================================================
 // 🧩 KONFIGURACJA POZIOMÓW
 // ==========================================================================
+
+
 const LEVEL_CONFIG = [
-    { mode: 'range', min: 1, max: 5 },
-    { mode: 'range', min: 6, max: 9 },
-    { mode: 'range', min: 10, max: 15 },
-    { mode: 'list', numbers: [10, 20, 30, 40] },
-    { mode: 'list', numbers: [2, 4, 6, 8, 10, 12] },
-    { mode: 'range', min: 20, max: 30 }
-];
+    { mode: 'range', min: 1, max: 6 },
+   { mode: 'range', min: 6, max: 9 },
+     { mode: 'range', min: 9, max: 10 },
+    { mode: 'range', min: 9, max: 11 },
+     { mode: 'range', min: 10, max: 12 },
+     { mode: 'range', min: 10, max: 13 },
+     { mode: 'range', min: 10, max: 14 },
+     { mode: 'range', min: 10, max: 19 },
+     { mode: 'list', numbers: [1, 2, 3, 4] },
+    { mode: 'list', numbers: [10, 11, 12, 13, 14, 15] },
+    { mode: 'range', min: 1, max: 20 }
+ ];
 
 const SCENE_SIZE = 18;
 const PACMAN_SPEED = 0.15;
@@ -601,5 +609,3 @@ function animate() {
 }
 
 init();
-
-
