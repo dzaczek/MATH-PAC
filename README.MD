@@ -18,7 +18,8 @@ The project is built with **Three.js** and features a YouTube API integration fo
 The game runs in a browser but **requires a local server** (due to CORS security policies and ES6 modules) and audio file generation.
 ### 0. FAST TRACK
 
-```git  clone https://github.com/dzaczek/MATH-PAC
+```
+git  clone https://github.com/dzaczek/MATH-PAC
 cd MATH-PAC 
 python3 -m http.server
 ```
