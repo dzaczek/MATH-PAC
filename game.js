@@ -8,8 +8,10 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 const ENABLE_BONUSES = true;
 const BONUS_TIME_SECONDS = 6;
+// Prędkość w jednostkach na sekundę (wcześniej było 0.05 na klatkę, przy 60fps ~3.0)
+const PACMAN_SPEED = 3.5; 
+const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 800;
 
-// ==========================================================================
 // 📺 KONFIGURACJA FILMÓW
 // ==========================================================================
 const BONUS_PLAYLISTS = {
@@ -40,8 +42,12 @@ const LEVEL_CONFIG = [
     { mode: 'range', min: 1, max: 20 }
 ];
 
+    const range = LEVEL_CONFIG[LEVEL_CONFIG.length - 1]; // Fallback to last level logic or similar
+    // ... rest of logic
+    */
+    
 const SCENE_SIZE = 18;
-const PACMAN_SPEED = 0.05;
+// const PACMAN_SPEED = 0.05; // USUNIĘTE - przeniesione wyżej jako stała "na sekundę"
 const SAFE_SPAWN_DISTANCE = 5.0;
 const MIN_NUMBER_SPACING = 2.5;
 
@@ -54,6 +60,7 @@ const BASE_CAMERA_POS = { x: 0, y: 14, z: 14 }; // Pozycja wyjściowa
 
 let scene, camera, renderer, font;
 let pacman;
+let clock; // Zegar do Delta Time
 const numbersOnBoard = [];
 const keys = { w: false, a: false, s: false, d: false };
 
@@ -130,24 +137,40 @@ function init() {
     camera.position.set(BASE_CAMERA_POS.x, BASE_CAMERA_POS.y, BASE_CAMERA_POS.z);
     camera.lookAt(0, 0, 0);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.shadowMap.enabled = true;
+    // Optymalizacja dla mobile: wyłączamy antyaliasing jeśli mobile
+    renderer = new THREE.WebGLRenderer({ antialias: !IS_MOBILE });
+    
+    // Cienie są bardzo kosztowne na mobile - wyłączamy je lub upraszczamy
+    renderer.shadowMap.enabled = !IS_MOBILE;
+    if(!IS_MOBILE) {
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+
     renderer.setSize(window.innerWidth, window.innerHeight);
+    // Limit PixelRatio dla wydajności (max 2.0 dla Retina, więcej nie trzeba)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    
     document.body.appendChild(renderer.domElement);
+
+    clock = new THREE.Clock(); // Inicjalizacja zegara
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.position.set(8, 12, 8);
-    dirLight.castShadow = true;
+    if (!IS_MOBILE) {
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024; // Lepsza jakość cieni na PC
+        dirLight.shadow.mapSize.height = 1024;
+    }
     scene.add(dirLight);
 
     const floorGeometry = new THREE.PlaneGeometry(SCENE_SIZE, SCENE_SIZE);
     const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, side: THREE.DoubleSide });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
+    if (!IS_MOBILE) floor.receiveShadow = true;
     scene.add(floor);
 
     const gridHelper = new THREE.GridHelper(SCENE_SIZE, SCENE_SIZE / 2, 0x000000, 0x555555);
@@ -236,13 +259,17 @@ class Pacman {
         this.mouthTimer = 0;
     }
 
-    update() {
+    update(dt) {
         this.velocity.x = 0;
         this.velocity.z = 0;
-        if (keys.w) this.velocity.z = -PACMAN_SPEED;
-        if (keys.s) this.velocity.z = PACMAN_SPEED;
-        if (keys.a) this.velocity.x = -PACMAN_SPEED;
-        if (keys.d) this.velocity.x = PACMAN_SPEED;
+        
+        // Prędkość zależna od Delta Time (dt)
+        const moveSpeed = PACMAN_SPEED * dt;
+
+        if (keys.w) this.velocity.z = -moveSpeed;
+        if (keys.s) this.velocity.z = moveSpeed;
+        if (keys.a) this.velocity.x = -moveSpeed;
+        if (keys.d) this.velocity.x = moveSpeed;
 
         this.pivot.position.x += this.velocity.x;
         this.pivot.position.z += this.velocity.z;
@@ -254,7 +281,9 @@ class Pacman {
         if (this.velocity.x !== 0 || this.velocity.z !== 0) {
             const angle = Math.atan2(this.velocity.x, this.velocity.z);
             this.body.rotation.y = angle;
-            this.mouthTimer += 0.25;
+            
+            // Animacja buzi też powinna zależeć od czasu, nie klatek
+            this.mouthTimer += dt * 15; 
             const openAmount = (Math.sin(this.mouthTimer) + 1) * 0.3;
             this.topJaw.rotation.x = -openAmount;
             this.bottomJaw.rotation.x = openAmount;
@@ -274,10 +303,10 @@ class NumberObj {
         });
         geometry.center();
         this.material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-        this.mesh = new THREE.Mesh(geometry, this.material);
-        this.mesh.castShadow = true;
-        this.mesh.position.y = 0.8;
-        this.mesh.rotation.x = -Math.PI / 5;
+    this.mesh = new THREE.Mesh(geometry, this.material);
+    if(!IS_MOBILE) this.mesh.castShadow = true;
+    this.mesh.position.y = 0.8;
+    this.mesh.rotation.x = -Math.PI / 5;
         this.respawn();
         scene.add(this.mesh);
     }
@@ -434,7 +463,7 @@ function handleCollision(numObj, index) {
 // ==========================================================================
 // 🎥 DYNAMICZNA KAMERA
 // ==========================================================================
-function updateCamera() {
+function updateCamera(dt) {
     if (!pacman || !camera) return;
 
     // Pobieramy pozycję Pacmana
@@ -459,10 +488,15 @@ function updateCamera() {
     const targetZ = (BASE_CAMERA_POS.z * currentZoom) + zoomOffset;
     const targetY = (BASE_CAMERA_POS.y * currentZoom) + (zoomOffset * 0.3);
 
-    // Płynna interpolacja (Lerp) - 0.1 to prędkość wygładzania
-    camera.position.x += (targetX - camera.position.x) * 0.1;
-    camera.position.z += (targetZ - camera.position.z) * 0.1;
-    camera.position.y += (targetY - camera.position.y) * 0.1;
+    // Płynna interpolacja (Lerp) niezależna od FPS
+    // Wzór: a += (b - a) * (1 - Math.exp(-speed * dt))
+    // Uproszczony Lerp: factor * dt * speed
+    const lerpSpeed = 5.0; // Prędkość podążania kamery
+    const factor = Math.min(1.0, dt * lerpSpeed);
+
+    camera.position.x += (targetX - camera.position.x) * factor;
+    camera.position.z += (targetZ - camera.position.z) * factor;
+    camera.position.y += (targetY - camera.position.y) * factor;
 }
 
 // ==========================================================================
@@ -590,10 +624,12 @@ function gameOver() {
 function animate() {
     requestAnimationFrame(animate);
 
+    const dt = clock.getDelta(); // Pobieramy czas od ostatniej klatki w sekundach
+
     if(gameState.active && !gameState.bonusActive) {
-        pacman.update();
+        pacman.update(dt);
         // --- AKTUALIZACJA KAMERY ---
-        updateCamera();
+        updateCamera(dt);
     }
 
     const time = Date.now() * 0.002;
