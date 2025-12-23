@@ -135,12 +135,19 @@
 
     <div id="overlay">
         <h1>MATH PACMAN</h1>
-        <p>Wybierz język / Choose language:</p>
-        <div>
-            <button class="btn" onclick="startGame('pl')">🇵🇱 Polski</button>
-            <button class="btn" onclick="startGame('en')">🇺🇸 English</button>
-            <button class="btn" onclick="startGame('de')">🇩🇪 Deutsch</button>
-            <button class="btn" onclick="startGame('fr')">🇫🇷 Français</button>
+        
+        <div id="loading-msg" style="font-size: 2rem; color: #ffcc00; animation: pulse 1s infinite alternate;">
+            ⏳ Ładowanie... / Loading...
+        </div>
+
+        <div id="lang-menu" style="display: none;">
+            <p>Wybierz język / Choose language:</p>
+            <div>
+                <button class="btn" onclick="startGame('pl')">🇵🇱 Polski</button>
+                <button class="btn" onclick="startGame('en')">🇺🇸 English</button>
+                <button class="btn" onclick="startGame('de')">🇩🇪 Deutsch</button>
+                <button class="btn" onclick="startGame('fr')">🇫🇷 Français</button>
+            </div>
         </div>
     </div>
 

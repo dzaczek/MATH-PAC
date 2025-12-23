@@ -179,6 +179,11 @@ function init() {
     const loader = new FontLoader();
     loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', (loadedFont) => {
         font = loadedFont;
+        // Font załadowany - pokazujemy menu
+        const loadingMsg = document.getElementById('loading-msg');
+        if(loadingMsg) loadingMsg.style.display = 'none';
+        const langMenu = document.getElementById('lang-menu');
+        if(langMenu) langMenu.style.display = 'block';
     });
 
     window.addEventListener('keydown', (e) => {
