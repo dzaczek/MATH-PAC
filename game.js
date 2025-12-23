@@ -177,14 +177,40 @@ function init() {
     scene.add(gridHelper);
 
     const loader = new FontLoader();
-    loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', (loadedFont) => {
-        font = loadedFont;
-        // Font załadowany - pokazujemy menu
+    
+    // Funkcja pomocnicza do pokazania menu
+    const showMenu = () => {
         const loadingMsg = document.getElementById('loading-msg');
         if(loadingMsg) loadingMsg.style.display = 'none';
         const langMenu = document.getElementById('lang-menu');
         if(langMenu) langMenu.style.display = 'block';
-    });
+    };
+
+    // Timeout - jeśli po 10 sekundach się nie załaduje, pokaż menu i tak
+    const timeoutId = setTimeout(() => {
+        console.warn("⚠️ Timeout ładowania czcionki - pokazuję menu mimo to");
+        if (!font) {
+            console.warn("⚠️ Gra będzie działać bez czcionki 3D (cyfry mogą nie wyświetlać się poprawnie)");
+        }
+        showMenu();
+    }, 10000);
+
+    loader.load(
+        'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',
+        (loadedFont) => {
+            font = loadedFont;
+            clearTimeout(timeoutId); // Anuluj timeout, bo się załadowało
+            showMenu();
+        },
+        undefined, // onProgress (opcjonalne)
+        (error) => {
+            // Obsługa błędu ładowania
+            console.error("❌ Błąd ładowania czcionki:", error);
+            clearTimeout(timeoutId);
+            // Pokaż menu mimo błędu - gra może działać bez czcionki (choć cyfry mogą nie wyświetlać się)
+            showMenu();
+        }
+    );
 
     window.addEventListener('keydown', (e) => {
         if(gameState.bonusActive) return;
@@ -359,7 +385,20 @@ class NumberObj {
 // --- LOGIKA GRY ---
 
 window.addEventListener('init-game', (e) => {
-    if(!font) return;
+    if(!font) {
+        // Jeśli font nie załadował się, pokaż komunikat błędu
+        const overlay = document.getElementById('overlay');
+        if(overlay) {
+            overlay.innerHTML = `
+                <h1 style="color: #f00;">⚠️ BŁĄD ŁADOWANIA</h1>
+                <p style="font-size: 1.5rem; color: #fff;">Nie udało się załadować czcionki 3D.</p>
+                <p style="font-size: 1.2rem; color: #aaa;">Sprawdź połączenie internetowe i odśwież stronę.</p>
+                <button class="btn" onclick="location.reload()">🔄 Odśwież / Refresh</button>
+            `;
+            overlay.style.display = 'flex';
+        }
+        return;
+    }
     gameState.lang = e.detail.lang;
     gameState.lives = 5;
     gameState.levelIndex = 0;
