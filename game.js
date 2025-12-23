@@ -42,10 +42,6 @@ const LEVEL_CONFIG = [
     { mode: 'range', min: 1, max: 20 }
 ];
 
-    const range = LEVEL_CONFIG[LEVEL_CONFIG.length - 1]; // Fallback to last level logic or similar
-    // ... rest of logic
-    */
-    
 const SCENE_SIZE = 18;
 // const PACMAN_SPEED = 0.05; // USUNIĘTE - przeniesione wyżej jako stała "na sekundę"
 const SAFE_SPAWN_DISTANCE = 5.0;
