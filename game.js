@@ -57,6 +57,7 @@ const BASE_CAMERA_POS = { x: 0, y: 14, z: 14 }; // Pozycja wyjściowa
 let scene, camera, renderer, font;
 let pacman;
 let clock; // Zegar do Delta Time
+let audioContext = null; // Kontekst audio dla mobile
 const numbersOnBoard = [];
 const keys = { w: false, a: false, s: false, d: false };
 
@@ -395,6 +396,17 @@ window.addEventListener('init-game', (e) => {
         }
         return;
     }
+    
+    // ODBLOKOWANIE AUDIO NA MOBILE
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+            console.log("🔊 AudioContext wznowiony!");
+        });
+    }
+    
     gameState.lang = e.detail.lang;
     gameState.lives = 5;
     gameState.levelIndex = 0;
@@ -630,7 +642,14 @@ function endBonus(forceNext = false) {
 function playSound(name) {
     const audio = new Audio(`assets/sounds/${gameState.lang}/${name}.mp3`);
     audio.volume = 0.8;
-    audio.play().catch(e => console.warn("Audio error:", e));
+    
+    // Jeśli mamy kontekst audio (mobile fix), podpinamy go
+    if (audioContext && audioContext.state === 'running') {
+        // Nie musimy nic robić dla zwykłego tagu Audio, ale samo resume() wyżej powinno pomóc.
+        // Ewentualnie Web Audio API wymagałoby source node, ale dla prostych dźwięków wystarczy resume().
+    }
+    
+    audio.play().catch(e => console.warn("Audio error (może zablokowane przez przeglądarkę?):", e));
 }
 
 function showFeedback(text, color = '#fff') {
