@@ -60,6 +60,40 @@
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             font-size: 3rem; color: #fff; text-shadow: 0 0 10px red; opacity: 0; transition: opacity 0.5s;
         }
+
+        /* STEROWANIE MOBILNE */
+        #mobile-controls {
+            position: absolute; bottom: 20px; right: 20px;
+            display: none; /* Domyślnie ukryte na desktopie */
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px;
+            gap: 10px;
+            z-index: 100;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        @media (max-width: 1024px) {
+            body.game-running #mobile-controls { display: grid; }
+            #ui-layer { pointer-events: none; } /* Upewniamy się, że UI nie blokuje */
+        }
+
+        .control-btn {
+            width: 60px; height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            color: white; font-size: 24px; font-weight: bold;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; touch-action: manipulation;
+        }
+        .control-btn:active, .control-btn.active { background: rgba(255, 204, 0, 0.5); border-color: #ffcc00; }
+
+        #btn-up { grid-column: 2; grid-row: 1; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-down { grid-column: 2; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
     </style>
     
     <script type="importmap">
@@ -81,6 +115,14 @@
             <div class="hud-item">Życia: <span id="lives-disp">❤❤❤❤❤</span></div>
         </div>
         <div id="message-area">BŁĄD</div>
+    </div>
+
+    <!-- Sterowanie mobilne -->
+    <div id="mobile-controls">
+        <div class="control-btn" id="btn-up">▲</div>
+        <div class="control-btn" id="btn-left">◀</div>
+        <div class="control-btn" id="btn-down">▼</div>
+        <div class="control-btn" id="btn-right">▶</div>
     </div>
 
     <div id="bonus-layer">
@@ -107,6 +149,44 @@
         window.startGame = (lang) => {
             window.dispatchEvent(new CustomEvent('init-game', { detail: { lang } }));
         };
+
+        window.addEventListener('init-game', () => {
+            document.body.classList.add('game-running');
+        });
+
+        // Obsługa sterowania mobilnego
+        const setupMobileControls = () => {
+            const buttons = {
+                'btn-up': 'ArrowUp',
+                'btn-down': 'ArrowDown',
+                'btn-left': 'ArrowLeft',
+                'btn-right': 'ArrowRight'
+            };
+
+            Object.keys(buttons).forEach(id => {
+                const btn = document.getElementById(id);
+                const code = buttons[id];
+                
+                const triggerKey = (isDown) => {
+                    const eventType = isDown ? 'keydown' : 'keyup';
+                    const event = new KeyboardEvent(eventType, { code: code });
+                    window.dispatchEvent(event);
+                    if(isDown) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                };
+
+                // Obsługa dotyku
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); triggerKey(true); }, { passive: false });
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); triggerKey(false); }, { passive: false });
+                
+                // Obsługa myszy (dla testów na desktopie w trybie responsywnym)
+                btn.addEventListener('mousedown', (e) => { e.preventDefault(); triggerKey(true); });
+                btn.addEventListener('mouseup', (e) => { e.preventDefault(); triggerKey(false); });
+                btn.addEventListener('mouseleave', (e) => { if(btn.classList.contains('active')) triggerKey(false); });
+            });
+        };
+
+        setupMobileControls();
     </script>
 </body>
 </html>
