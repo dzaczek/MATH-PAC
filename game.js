@@ -75,10 +75,16 @@ const gameState = {
     lang: 'pl',
     hintsEnabled: true,
     currentVideoIndex: 0,
-    currentVideoTime: 0
+    currentVideoTime: 0,
+    cameraZoom: 1.0 // 1.0 = standard, >1 = oddalenie, <1 = przybliżenie
 };
 
 const getCurrentTarget = () => gameState.objectives[gameState.currentObjIndex];
+
+// Obsługa zoomowania z zewnątrz (np. pinch gesture)
+window.updateGameZoom = (delta) => {
+    gameState.cameraZoom = Math.max(0.5, Math.min(2.0, gameState.cameraZoom + delta));
+};
 
 // ==========================================================================
 // 🛠️ INICJALIZACJA YOUTUBE
@@ -327,6 +333,7 @@ window.addEventListener('init-game', (e) => {
     gameState.currentVideoTime = 0;
     gameState.active = true;
     gameState.hintsEnabled = true;
+    gameState.cameraZoom = 1.0; // Reset zoomu przy starcie
     document.getElementById('overlay').style.display = 'none';
     document.getElementById('hud').style.display = 'flex';
     updateHud();
@@ -430,20 +437,30 @@ function handleCollision(numObj, index) {
 function updateCamera() {
     if (!pacman || !camera) return;
 
-    // Pobieramy pozycję Z Pacmana (głębokość)
+    // Pobieramy pozycję Pacmana
+    const pacX = pacman.pivot.position.x;
     const pacZ = pacman.pivot.position.z;
 
-    // Obliczamy cel dla kamery
-    // Jeśli Pacman idzie w stronę kamery (Z > 0), kamera odjeżdża
-    // Używamy Math.max(0, ...), żeby kamera nie przybliżała się za bardzo, gdy Pacman jest głęboko w planszy (Z < 0)
+    // --- ŚLEDZENIE W OSI X (Lewo/Prawo) ---
+    // Kamera podąża za Pacmanem, ale z lekkim opóźnieniem i nie 1:1,
+    // żeby zachować perspektywę całej planszy.
+    // Mnożnik 0.6 oznacza, że kamera przesuwa się o 60% tego co Pacman.
+    const targetX = pacX * 0.6;
 
-    // Czułość (0.8 oznacza, że na każdy 1m ruchu Pacmana, kamera cofa się o 0.8m)
+    // --- ŚLEDZENIE W OSI Z (Głębokość) I ZOOM ---
+    // Jeśli Pacman idzie w stronę kamery (Z > 0), kamera odjeżdża
     const zoomOffset = Math.max(0, pacZ * 0.8);
 
-    const targetZ = BASE_CAMERA_POS.z + zoomOffset;
-    const targetY = BASE_CAMERA_POS.y + (zoomOffset * 0.3); // Lekko w górę też
+    // Uwzględniamy manualny zoom (pinch)
+    const currentZoom = gameState.cameraZoom;
+
+    // Obliczamy docelowe pozycje
+    // Base positions są skalowane przez currentZoom
+    const targetZ = (BASE_CAMERA_POS.z * currentZoom) + zoomOffset;
+    const targetY = (BASE_CAMERA_POS.y * currentZoom) + (zoomOffset * 0.3);
 
     // Płynna interpolacja (Lerp) - 0.1 to prędkość wygładzania
+    camera.position.x += (targetX - camera.position.x) * 0.1;
     camera.position.z += (targetZ - camera.position.z) * 0.1;
     camera.position.y += (targetY - camera.position.y) * 0.1;
 }

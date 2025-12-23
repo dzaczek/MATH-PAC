@@ -187,6 +187,47 @@
         };
 
         setupMobileControls();
+
+        // Obsługa gestów (Pinch to Zoom)
+        const setupTouchGestures = () => {
+            let initialPinchDistance = null;
+
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    initialPinchDistance = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && initialPinchDistance !== null) {
+                    const currentDistance = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+
+                    const diff = initialPinchDistance - currentDistance;
+                    // Jeśli diff > 0 (zbliżamy palce) -> zoom out (większa wartość zoom)
+                    // Jeśli diff < 0 (oddalamy palce) -> zoom in (mniejsza wartość zoom)
+                    // Ale w naszej logice updateGameZoom: + to oddalanie, - to przybliżanie.
+                    
+                    if (window.updateGameZoom) {
+                        // Czułość
+                        window.updateGameZoom(diff * 0.005);
+                    }
+
+                    initialPinchDistance = currentDistance;
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchend', () => {
+                initialPinchDistance = null;
+            });
+        };
+
+        setupTouchGestures();
     </script>
 </body>
 </html>
