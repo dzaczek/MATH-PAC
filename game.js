@@ -6,7 +6,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 // ⚙️ GŁÓWNA KONFIGURACJA
 // ==========================================================================
 
-const ENABLE_BONUSES = false;
+const ENABLE_BONUSES = true;
 const BONUS_TIME_SECONDS = 6;
 
 // ==========================================================================
