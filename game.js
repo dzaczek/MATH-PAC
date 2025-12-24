@@ -7,7 +7,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 // ==========================================================================
 
 const ENABLE_BONUSES = true;
-const BONUS_TIME_SECONDS = 6;
+const BONUS_TIME_SECONDS = 15;
 // Prędkość w jednostkach na sekundę (wcześniej było 0.05 na klatkę, przy 60fps ~3.0)
 const PACMAN_SPEED = 3.5; 
 const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 800;
@@ -17,12 +17,12 @@ const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini
 const BONUS_PLAYLISTS = {
     'pl': [
         "wzb0uolNv5c", // Film 1
-        "wzb0uolNv5c", // Film 2
-        "wzb0uolNv5c", // Film 3
+        "80KaHCW4E2I", // Film 2
+        "Ul-o7mbzCGY", // Film 3
     ],
-    'en': ["_WnwvI8EKDw", "7D4K9oi7oBM", "_WnwvI8EKDw"],
-    'de': ["J3i56A55aC4", "J3i56A55aC4", "J3i56A55aC4"],
-    'fr': ["d8x2aQJgXb4", "d8x2aQJgXb4", "d8x2aQJgXb4"]
+    'en': ["Xw3-3jQQMBk", "Xw3-3jQQMBk", "Xw3-3jQQMBk"],
+    'de': ["JPJC9xKaCEk", "JPJC9xKaCEk", "JPJC9xKaCEk"],
+    'fr': ["06m0AXuZcOU", "Iau0CbwSiKE", "K9jKEf3vO8c"]
 };
 
 // ==========================================================================
@@ -32,14 +32,17 @@ const LEVEL_CONFIG = [
     { mode: 'range', min: 1, max: 6 },
     { mode: 'range', min: 6, max: 9 },
     { mode: 'range', min: 9, max: 10 },
+    { mode: 'range', min: 1, max: 10 },
     { mode: 'range', min: 9, max: 11 },
     { mode: 'range', min: 10, max: 12 },
-    { mode: 'range', min: 10, max: 13 },
-    { mode: 'range', min: 10, max: 14 },
+    { mode: 'range', min: 12, max: 14 },
+    { mode: 'range', min: 10, max: 16 },
+    { mode: 'range', min: 16, max: 18 },
+    { mode: 'range', min: 15, max: 19 },
     { mode: 'range', min: 10, max: 19 },
-    { mode: 'list', numbers: [1, 2, 3, 4] },
-    { mode: 'list', numbers: [10, 11, 12, 13, 14, 15] },
-    { mode: 'range', min: 1, max: 20 }
+ //   { mode: 'list', numbers: [1, 2, 3, 4] },
+ //   { mode: 'list', numbers: [10, 11, 12, 13, 14, 15] },
+    { mode: 'range', min: 1, max: 19 }
 ];
 
 const SCENE_SIZE = 18;
