@@ -7,7 +7,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 // ==========================================================================
 
 const ENABLE_BONUSES = true;
-const BONUS_TIME_SECONDS = 15;
+const BONUS_TIME_SECONDS = 65;
 // Prędkość w jednostkach na sekundę (wcześniej było 0.05 na klatkę, przy 60fps ~3.0)
 const PACMAN_SPEED = 3.5; 
 const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 800;
