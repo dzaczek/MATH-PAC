@@ -6,7 +6,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 // ⚙️ GŁÓWNA KONFIGURACJA
 // ==========================================================================
 
-const ENABLE_BONUSES = true;
+const ENABLE_BONUSES = false;
 const BONUS_TIME_SECONDS = 65;
 // Prędkość w jednostkach na sekundę (wcześniej było 0.05 na klatkę, przy 60fps ~3.0)
 const PACMAN_SPEED = 3.5; 
