@@ -29,17 +29,10 @@ const BONUS_PLAYLISTS = {
 // 🧩 KONFIGURACJA POZIOMÓW (TWOJA NOWA LISTA)
 // ==========================================================================
 const LEVEL_CONFIG = [
-    { mode: 'range', min: 1, max: 6 },
-    { mode: 'range', min: 6, max: 9 },
-    { mode: 'range', min: 9, max: 10 },
     { mode: 'range', min: 1, max: 10 },
-    { mode: 'range', min: 9, max: 11 },
-    { mode: 'range', min: 10, max: 12 },
-    { mode: 'range', min: 12, max: 14 },
-    { mode: 'range', min: 10, max: 16 },
-    { mode: 'range', min: 16, max: 18 },
-    { mode: 'range', min: 15, max: 19 },
-    { mode: 'range', min: 10, max: 19 },
+    { mode: 'range', min: 10, max: 15 },
+    { mode: 'range', min: 15, max: 20 },
+    { mode: 'range', min: 1, max: 30 },
  //   { mode: 'list', numbers: [1, 2, 3, 4] },
  //   { mode: 'list', numbers: [10, 11, 12, 13, 14, 15] },
     { mode: 'range', min: 1, max: 19 }
